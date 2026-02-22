@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroLearning | Disciplina</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:#0f172a;
+  color:white;
+}
+
+header{
+  padding:20px;
+  background:#111827;
+  border-bottom:1px solid #1f2937;
+}
+
+.container{
+  padding:20px;
+}
+
+.card{
+  background:#1e293b;
+  padding:18px;
+  border-radius:14px;
+  margin-bottom:18px;
+  box-shadow:0 0 20px rgba(0,0,0,0.3);
+}
+
+.progress-bar{
+  background:#0f172a;
+  border-radius:20px;
+  overflow:hidden;
+  height:14px;
+  margin-top:10px;
+}
+
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#3b82f6,#06b6d4);
+  transition:0.4s;
+}
+
+button{
+  padding:12px 16px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:bold;
+  margin-top:10px;
+}
+
+.primary{
+  background:#2563eb;
+  color:white;
+}
+
+.modal{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.85);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  text-align:center;
+  padding:20px;
+}
+
+.medalla{
+  font-size:80px;
+  margin-bottom:20px;
+}
+
+.frase{
+  font-size:18px;
+  margin-bottom:20px;
+  color:#93c5fd;
+}
+
+.logros-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(80px,1fr));
+  gap:15px;
+  margin-top:15px;
+  text-align:center;
+}
+
+.logro-item{
+  font-size:30px;
+}
+.logro-item span{
+  display:block;
+  font-size:12px;
+  margin-top:5px;
+  color:#94a3b8;
+}
+
+.reset-secreto{
+  position:fixed;
+  bottom:10px;
+  right:10px;
+  font-size:14px;
+  color:#94a3b8;
+  opacity:0.4;
+  cursor:pointer;
+  user-select:none;
+  transition:0.3s;
+}
+.reset-secreto:hover{
+  opacity:0.9;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h2>📈 Sistema de Disciplina</h2>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <strong>🧠 Nivel:</strong> <span id="nivelTexto"></span><br>
+    <strong>⭐ XP Total:</strong> <span id="xpTexto"></span><br>
+    <strong>🔥 Entrenamientos:</strong> <span id="entrenamientosTexto"></span>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="barra"></div>
+    </div>
+
+    <div style="font-size:13px;color:#94a3b8;" id="progresoNivelTexto"></div>
+  </div>
+
+  <div class="card">
+    <strong>🎯 Registrar entrenamiento</strong><br>
+    <button class="primary" onclick="completarActividad()">Completar actividad</button>
+  </div>
+
+  <div class="card">
+    <strong>🏅 Historial de Logros</strong>
+    <div class="logros-grid" id="logrosGrid"></div>
+  </div>
+
+</div>
+
+<div class="modal" id="modal">
+  <div class="medalla" id="medallaIcono"></div>
+  <div class="frase" id="fraseNivel"></div>
+  <button class="primary" onclick="cerrarModal()">Seguir entrenando</button>
+</div>
+
+<div class="reset-secreto" onclick="resetearSistema()">⚙</div>
+
+<script>
+
+const XP_POR_ENTRENAMIENTO = 15;
+const XP_POR_NIVEL = 100;
+
+let xpTotal = parseInt(localStorage.getItem("xpTotal")) || 0;
+let entrenamientos = parseInt(localStorage.getItem("entrenamientos")) || 0;
+let nivelGuardado = parseInt(localStorage.getItem("nivelActual")) || 1;
+let logros = JSON.parse(localStorage.getItem("logros")) || [];
+
+function completarActividad(){
+  xpTotal += XP_POR_ENTRENAMIENTO;
+  entrenamientos += 1;
+
+  let nuevoNivel = Math.floor(xpTotal / XP_POR_NIVEL) + 1;
+
+  if(nuevoNivel > nivelGuardado){
+    guardarLogro(nuevoNivel);
+    mostrarMedalla(nuevoNivel);
+    nivelGuardado = nuevoNivel;
+    localStorage.setItem("nivelActual", nivelGuardado);
+  }
+
+  localStorage.setItem("xpTotal", xpTotal);
+  localStorage.setItem("entrenamientos", entrenamientos);
+
+  actualizarUI();
+}
+
+function actualizarUI(){
+  let nivel = Math.floor(xpTotal / XP_POR_NIVEL) + 1;
+  let xpActualNivel = xpTotal % XP_POR_NIVEL;
+  let porcentaje = (xpActualNivel / XP_POR_NIVEL) * 100;
+
+  document.getElementById("nivelTexto").innerText = nivel;
+  document.getElementById("xpTexto").innerText = xpTotal;
+  document.getElementById("entrenamientosTexto").innerText = entrenamientos;
+  document.getElementById("barra").style.width = porcentaje + "%";
+  document.getElementById("progresoNivelTexto").innerText =
+    xpActualNivel + " / " + XP_POR_NIVEL + " XP para subir de nivel";
+
+  renderizarLogros();
+}
+
+function guardarLogro(nivel){
+  logros.push({
+    nivel:nivel,
+    icono:obtenerIcono(nivel)
+  });
+  localStorage.setItem("logros", JSON.stringify(logros));
+}
+
+function renderizarLogros(){
+  let grid = document.getElementById("logrosGrid");
+  grid.innerHTML = "";
+  logros.forEach(logro=>{
+    let div = document.createElement("div");
+    div.classList.add("logro-item");
+    div.innerHTML = logro.icono + "<span>Nivel " + logro.nivel + "</span>";
+    grid.appendChild(div);
+  });
+}
+
+function mostrarMedalla(nivel){
+  document.getElementById("medallaIcono").innerText = obtenerIcono(nivel);
+  document.getElementById("fraseNivel").innerText = obtenerFrase(nivel);
+  document.getElementById("modal").style.display = "flex";
+}
+
+function cerrarModal(){
+  document.getElementById("modal").style.display = "none";
+}
+
+function obtenerIcono(nivel){
+  if(nivel == 2) return "🥈";
+  if(nivel == 3) return "🥇";
+  if(nivel == 4) return "🏆";
+  if(nivel >= 5) return "👑";
+  return "🥉";
+}
+
+function obtenerFrase(nivel){
+  if(nivel == 2) return "La constancia empieza a notarse.";
+  if(nivel == 3) return "Tu enfoque supera la motivación.";
+  if(nivel == 4) return "La disciplina ya forma parte de ti.";
+  if(nivel >= 5) return "Ya no entrenas… eres disciplina.";
+  return "Has comenzado el camino.";
+}
+
+/* RESET LIMPIO */
+function resetearSistema(){
+  let clave = prompt("Clave:");
+  if(clave === "5524"){
+    xpTotal = 0;
+    entrenamientos = 0;
+    nivelGuardado = 1;
+    logros = [];
+
+    localStorage.setItem("xpTotal", 0);
+    localStorage.setItem("entrenamientos", 0);
+    localStorage.setItem("nivelActual", 1);
+    localStorage.setItem("logros", JSON.stringify([]));
+
+    actualizarUI();
+    alert("Sistema reiniciado a Nivel 1.");
+  }
+}
+
+actualizarUI();
+
+</script>
+
+</body>
+</html>
